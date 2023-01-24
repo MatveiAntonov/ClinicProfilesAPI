@@ -15,7 +15,7 @@ namespace Profiles.Domain.Entities
         public string MiddleName { get; set; } = String.Empty;
         public DateTime DateOfBirth { get; set; }
         public DateTime? CareerStartYear { get; set; }
-        public int Status { get; set; }
+        public string Status { get; set; } = String.Empty;
         public int OfficeId { get; set; }
         public Office? Office { get; set; }
         public int SpecializationId { get; set; }
