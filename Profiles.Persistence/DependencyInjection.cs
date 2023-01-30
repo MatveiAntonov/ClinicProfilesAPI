@@ -1,11 +1,6 @@
 ﻿using Microsoft.Extensions.DependencyInjection;
-using Profiles.Domain.Interfaces;
+using Profiles.Domain.Interfaces.Repositories;
 using Profiles.Persistence.Repositories;
-using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
 
 namespace Profiles.Persistence
 {
