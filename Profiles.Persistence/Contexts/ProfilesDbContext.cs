@@ -1,27 +1,22 @@
-﻿using Microsoft.EntityFrameworkCore;
-using Profiles.Domain.Entities;
-using Profiles.Domain.Entities.ForeignEntities;
-using Profiles.Persistence.EntityTypeConfigurations;
+﻿using Microsoft.Data.SqlClient;
+using Microsoft.Extensions.Configuration;
+using System.Data;
 
 namespace Profiles.Persistence.Contexts
 {
-    public class ProfilesDbContext : DbContext
+    public class ProfilesDbContext
     {
-        public DbSet<Doctor> Doctors { get; set; }
-        public DbSet<Patient> Patients { get; set; }
-        public DbSet<Receptionist> Receptionists { get; set; }
-        public DbSet<Account> Accounts { get; set; }
-        public DbSet<Office> Offices { get; set; }
-        public DbSet<Specialization> Specializations { get; set; }
-        public ProfilesDbContext(DbContextOptions<ProfilesDbContext> options)
-            : base(options) { }
+        private readonly IConfiguration _configuration;
 
-        protected override void OnModelCreating(ModelBuilder builder)
+        public ProfilesDbContext(IConfiguration configuration)
         {
-            builder.ApplyConfiguration(new AccountConfiguration());
-            builder.ApplyConfiguration(new PatientProfileConfiguration());
-            builder.ApplyConfiguration(new ReceptionistProfileConfiguration());
-            base.OnModelCreating(builder);
+            _configuration = configuration;
         }
+
+        public IDbConnection CreateConnection()
+            => new SqlConnection(_configuration.GetConnectionString("ProfilesConnection"));
+
+        //public IDbConnection CreateMasterConnection()
+        //    => new SqlConnection(_configuration.GetConnectionString("MasterConnection"));
     }
 }
