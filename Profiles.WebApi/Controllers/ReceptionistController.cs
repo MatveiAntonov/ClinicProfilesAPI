@@ -1,9 +1,11 @@
 ﻿using AutoMapper;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Profiles.Application.Services;
 using Profiles.Domain.Entities;
 using Profiles.Domain.Interfaces.Services;
 using Profiles.WebApi.Models.DTOs;
+using System.Data;
 
 namespace Profiles.WebApi.Controllers
 {
@@ -55,6 +57,7 @@ namespace Profiles.WebApi.Controllers
         }
 
         [HttpPost]
+        [Authorize(Roles = "Receptionist")]
         public async Task<ActionResult<ReceptionistDto>> CreateReceptionist([FromForm] ReceptionistDto receptionistDto)
         {
             if (receptionistDto == null)
@@ -75,6 +78,7 @@ namespace Profiles.WebApi.Controllers
         }
 
         [HttpPut]
+        [Authorize(Roles = "Receptionist")]
         public async Task<ActionResult<ReceptionistDto>> UpdateOffice([FromForm] ReceptionistDto receptionistDto)
         {
             if (receptionistDto == null)
@@ -95,6 +99,7 @@ namespace Profiles.WebApi.Controllers
         }
 
         [HttpDelete("{id}")]
+        [Authorize(Roles = "Receptionist")]
         public async Task<ActionResult<ReceptionistDto>> DeleteOffice(int id)
         {
             if (_receptionistService.GetReceptionistById(id) == null)
@@ -103,7 +108,7 @@ namespace Profiles.WebApi.Controllers
             };
 
             var receptionist = await _receptionistService.DeleteReceptionist(id);
-            if (receptionist is null)
+            if (receptionist is not null)
             {
                 return Ok();
             }
