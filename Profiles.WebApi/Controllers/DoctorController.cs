@@ -1,9 +1,11 @@
 ﻿using AutoMapper;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Profiles.Domain.Entities;
 using Profiles.Domain.Entities.ForeignEntities;
 using Profiles.Domain.Interfaces.Services;
 using Profiles.WebApi.Models.DTOs;
+using System.Data;
 
 namespace Profiles.WebApi.Controllers
 {
@@ -56,6 +58,7 @@ namespace Profiles.WebApi.Controllers
         }
 
         [HttpPost]
+        //[Authorize(Roles = "Receptionist")]
         public async Task<ActionResult<DoctorDto>> CreateDoctor([FromForm] DoctorDto doctorDto)
         {
             if (doctorDto == null)
@@ -76,6 +79,7 @@ namespace Profiles.WebApi.Controllers
         }
 
         [HttpPut]
+        //[Authorize(Roles = "Receptionist")]
         public async Task<ActionResult<DoctorDto>> UpdateOffice([FromForm] DoctorDto doctorDto)
         {
             if (doctorDto == null)
@@ -96,6 +100,7 @@ namespace Profiles.WebApi.Controllers
         }
 
         [HttpDelete("{id}")]
+        //[Authorize(Roles = "Receptionist")]
         public async Task<ActionResult<DoctorDto>> DeleteOffice(int id)
         {
             if (_doctorService.GetDoctorById(id) == null)
@@ -104,7 +109,7 @@ namespace Profiles.WebApi.Controllers
             };
 
             var doctor = await _doctorService.DeleteDoctor(id);
-            if (doctor is null)
+            if (doctor is not null)
             {
                 return Ok();
             }
