@@ -11,6 +11,8 @@ namespace Profiles.Persistence
             services.AddScoped<IDoctorRepository, DoctorRepository>();
             services.AddScoped<IPatientRepository, PatientRepository>();
             services.AddScoped<IReceptionistRepository, ReceptionistRepository>();
+
+            services.AddScoped<IAccountRepository, AccountRepository>();
             return services;
         }
     }
