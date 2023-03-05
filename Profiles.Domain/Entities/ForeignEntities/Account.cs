@@ -8,9 +8,8 @@ namespace Profiles.Domain.Entities.ForeignEntities
 {
     public class Account
     {
-        public int Id { get; set; }
+        public string Id { get; set; }
         public string PhoneNumber { get; set; } = String.Empty;
-        public int PhotoId { get; set; }
-        public Photo? Photo { get; set; } = new();
+        public string PhotoUrl { get; set; } = String.Empty;
     }
 }
