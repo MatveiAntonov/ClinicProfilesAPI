@@ -9,6 +9,6 @@ namespace Profiles.Domain.Entities.ForeignEntities
     public class Specialization
     {
         public int Id { get; set; }
-        public string SpecializationName { get; set; } = string.Empty;
+        public string SpecializationName { get; set; } = String.Empty;
     }
 }
