@@ -12,7 +12,7 @@ namespace Profiles.Domain.Entities
         public int Id { get; set; }
         public string FirstName { get; set; } = String.Empty;
         public string LastName { get; set; } = String.Empty;
-        public string MiddleName { get; set; } = String.Empty;
+        public string? MiddleName { get; set; } = String.Empty;
         public DateTime DateOfBirth { get; set; }
         public DateTime? CareerStartYear { get; set; }
         public string Status { get; set; } = String.Empty;
