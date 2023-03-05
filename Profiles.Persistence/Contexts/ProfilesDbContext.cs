@@ -15,8 +15,5 @@ namespace Profiles.Persistence.Contexts
 
         public IDbConnection CreateConnection()
             => new SqlConnection(_configuration.GetConnectionString("ProfilesConnection"));
-
-        //public IDbConnection CreateMasterConnection()
-        //    => new SqlConnection(_configuration.GetConnectionString("MasterConnection"));
     }
 }
