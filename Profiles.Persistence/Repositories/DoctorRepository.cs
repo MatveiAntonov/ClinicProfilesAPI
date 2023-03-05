@@ -1,19 +1,23 @@
 ﻿using Dapper;
+using Events;
+using MassTransit;
 using Profiles.Domain.Entities;
 using Profiles.Domain.Entities.ForeignEntities;
 using Profiles.Domain.Interfaces.Repositories;
 using Profiles.Persistence.Contexts;
 using System.Data;
-using System.Numerics;
+using static Dapper.SqlMapper;
 
 namespace Profiles.Persistence.Repositories
 {
     public class DoctorRepository : IDoctorRepository
     {
         private readonly ProfilesDbContext _profileDbContext;
-        public DoctorRepository(ProfilesDbContext profileDbContext)
+        private readonly IPublishEndpoint _publishEndpoint;
+        public DoctorRepository(ProfilesDbContext profileDbContext, IPublishEndpoint publishEndpoint)
         {
             _profileDbContext = profileDbContext;
+            _publishEndpoint = publishEndpoint;
         }
         public async Task<IEnumerable<Doctor?>> GetAllDoctors(CancellationToken cancellationToken)
         {
@@ -21,18 +25,16 @@ namespace Profiles.Persistence.Repositories
                 "FROM [Doctors] " +
                 "JOIN Specializations ON Doctors.SpecializationId = Specializations.Id " +
                 "JOIN Offices ON Doctors.OfficeId = Offices.Id " +
-                "JOIN Accounts ON Doctors.AccountId = Accounts.Id " +
-                "JOIN Photos ON Accounts.PhotoId = Photos.Id";
+                "JOIN Accounts ON Doctors.AccountId = Accounts.Id";
 
 
             using (var connection = _profileDbContext.CreateConnection())
             {
-                var doctors = await connection.QueryAsync<Doctor, Specialization, Office, Account, Photo, Doctor>(query,
-                    (doctor, specialization, office, account, photo) =>
+                var doctors = await connection.QueryAsync<Doctor, Specialization, Office, Account, Doctor>(query,
+                    (doctor, specialization, office, account) =>
                     {
                         doctor.Specialization = specialization;
                         doctor.Office = office;
-                        account.Photo = photo;
                         doctor.Account = account;
                         return doctor;
                     });
@@ -46,7 +48,6 @@ namespace Profiles.Persistence.Repositories
                 "JOIN Specializations ON Doctors.SpecializationId = Specializations.Id " +
                 "JOIN Offices ON Doctors.OfficeId = Offices.Id " +
                 "JOIN Accounts ON Doctors.AccountId = Accounts.Id " +
-                "JOIN Photos ON Accounts.PhotoId = Photos.Id " +
                 "WHERE Doctors.Id = @Id";
 
             var parameters = new DynamicParameters();
@@ -54,12 +55,11 @@ namespace Profiles.Persistence.Repositories
 
             using (var connection = _profileDbContext.CreateConnection())
             {
-                var doctors = await connection.QueryAsync<Doctor, Specialization, Office, Account, Photo, Doctor>(query,
-                    (doctor, specialization, office, account, photo) =>
+                var doctors = await connection.QueryAsync<Doctor, Specialization, Office, Account, Doctor>(query,
+                    (doctor, specialization, office, account) =>
                     {
                         doctor.Specialization = specialization;
                         doctor.Office = office;
-                        account.Photo = photo;
                         doctor.Account = account;
                         return doctor;
                     }, param: parameters);
@@ -72,6 +72,7 @@ namespace Profiles.Persistence.Repositories
             var query = "INSERT INTO [Doctors] " +
                 "(FirstName, LastName, MiddleName, DateOfBirth, " +
                 "CareerStartYear, Status, OfficeId, SpecializationId, AccountId) " +
+                "OUTPUT INSERTED.Id " +
                 "VALUES (@FirstName, @LastName, @MiddleName, @DateOfBirth, " +
                 "@CareerStartYear, @Status, @OfficeId, @SpecializationId, @AccountId)";
 
@@ -86,9 +87,30 @@ namespace Profiles.Persistence.Repositories
             parameters.Add("SpecializationId", doctor.SpecializationId, DbType.Int32);
             parameters.Add("AccountId", doctor.AccountId, DbType.Int32);
 
+
+
             using (var connection = _profileDbContext.CreateConnection())
             {
-                var r = await connection.ExecuteAsync(query, parameters);
+                var r = connection.ExecuteScalar<int>(query, parameters);
+
+                var insertedDoctor = await GetDoctor(r, default(CancellationToken));
+
+                await _publishEndpoint.Publish<DoctorCreated>(new
+                {
+                    Id = r,
+                    FirstName = insertedDoctor.FirstName,
+                    LastName = insertedDoctor.LastName,
+                    MiddleName = insertedDoctor.MiddleName,
+                    SpecializationName = insertedDoctor.Specialization.SpecializationName,
+                    PhotoUrl = insertedDoctor.Account.PhotoUrl,
+                    OfficeName = insertedDoctor.Office.OfficeName,
+                    OfficeCity = insertedDoctor.Office.City,
+                    OfficeRegion = insertedDoctor.Office.Region,
+                    OfficeStreet = insertedDoctor.Office.Street,
+                    OfficePostalCode = insertedDoctor.Office.PostalCode,
+                    OfficeHouseNumber = insertedDoctor.Office.HouseNumber
+                });
+
                 return r == 0 ? null : doctor;
             }
         }
@@ -115,19 +137,67 @@ namespace Profiles.Persistence.Repositories
             using (var connection = _profileDbContext.CreateConnection())
             {
                 var r = await connection.ExecuteAsync(query, parameters);
+
+                if (r != 0)
+                {
+                    var updatedDoctor = await GetDoctor(doctor.Id, default(CancellationToken));
+
+                    await _publishEndpoint.Publish<DoctorUpdated>(new
+                    {
+                        Id = updatedDoctor.Id,
+                        FirstName = updatedDoctor.FirstName,
+                        LastName = updatedDoctor.LastName,
+                        MiddleName = updatedDoctor.MiddleName,
+                        SpecializationName = updatedDoctor.Specialization.SpecializationName,
+                        PhotoUrl = updatedDoctor.Account.PhotoUrl,
+                        OfficeName = updatedDoctor.Office.OfficeName,
+                        OfficeCity = updatedDoctor.Office.City,
+                        OfficeRegion = updatedDoctor.Office.Region,
+                        OfficeStreet = updatedDoctor.Office.Street,
+                        OfficePostalCode = updatedDoctor.Office.PostalCode,
+                        OfficeHouseNumber = updatedDoctor.Office.HouseNumber
+                    });
+                }
+
                 return r == 0 ? null : doctor;
             }
         }
 
         public async Task<int> DeleteDoctor(int id, CancellationToken cancellationToken)
         {
-            string query = "DELETE FROM [Doctors] WHERE Id = @Id";
+            var doctor = await GetDoctor(id, default(CancellationToken));
 
-            using (var connection = _profileDbContext.CreateConnection())
+            if (doctor is not null)
             {
-                var r = await connection.ExecuteAsync(query, new { Id = id });
-                return r;
+                string query = "DELETE FROM [Doctors] WHERE Id = @Id";
+
+                using (var connection = _profileDbContext.CreateConnection())
+                {
+                    var r = await connection.ExecuteAsync(query, new { Id = id });
+
+                    if (r != 0)
+                    {
+
+                        await _publishEndpoint.Publish<DoctorDeleted>(new
+                        {
+                            Id = doctor.Id,
+                            FirstName = doctor.FirstName,
+                            LastName = doctor.LastName,
+                            MiddleName = doctor.MiddleName,
+                            SpecializationName = doctor.Specialization.SpecializationName,
+                            PhotoUrl = doctor.Account.PhotoUrl,
+                            OfficeName = doctor.Office.OfficeName,
+                            OfficeCity = doctor.Office.City,
+                            OfficeRegion = doctor.Office.Region,
+                            OfficeStreet = doctor.Office.Street,
+                            OfficePostalCode = doctor.Office.PostalCode,
+                            OfficeHouseNumber = doctor.Office.HouseNumber
+                        });
+                    }
+                    return r;
+                }
             }
+            return 0;
         }
     }
 }

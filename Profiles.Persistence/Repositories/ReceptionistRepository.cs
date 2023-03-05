@@ -20,16 +20,14 @@ namespace Profiles.Persistence.Repositories
             var query = "SELECT * " +
                 "FROM [Receptionists] " +
                 "JOIN Offices ON Receptionists.OfficeId = Offices.Id " +
-                "JOIN Accounts ON Receptionists.AccountId = Accounts.Id " +
-                "JOIN Photos ON Accounts.PhotoId = Photos.Id";
+                "JOIN Accounts ON Receptionists.AccountId = Accounts.Id";
 
             using (var connection = _profileDbContext.CreateConnection())
             {
-                var receptionists = await connection.QueryAsync<Receptionist, Office, Account, Photo, Receptionist>(query,
-                    (receptionist, office, account, photo) =>
+                var receptionists = await connection.QueryAsync<Receptionist, Office, Account, Receptionist>(query,
+                    (receptionist, office, account) =>
                     {
                         receptionist.Office = office;
-                        account.Photo = photo;
                         receptionist.Account = account;
                         return receptionist;
                     });
@@ -42,19 +40,17 @@ namespace Profiles.Persistence.Repositories
             var query = "SELECT * " +
                 "FROM [Receptionists] " +
                 "JOIN Offices ON Receptionists.OfficeId = Offices.Id " +
-                "JOIN Accounts ON Receptionists.AccountId = Accounts.Id " +
-                "JOIN Photos ON Accounts.PhotoId = Photos.Id";
+                "JOIN Accounts ON Receptionists.AccountId = Accounts.Id";
 
             var parameters = new DynamicParameters();
             parameters.Add("Id", id, DbType.Int32);
 
             using (var connection = _profileDbContext.CreateConnection())
             {
-                var receptionists = await connection.QueryAsync<Receptionist, Office, Account, Photo, Receptionist>(query,
-                    (receptionist, office, account, photo) =>
+                var receptionists = await connection.QueryAsync<Receptionist, Office, Account, Receptionist>(query,
+                    (receptionist, office, account) =>
                     {
                         receptionist.Office = office;
-                        account.Photo = photo;
                         receptionist.Account = account;
                         return receptionist;
                     }, param: parameters);
